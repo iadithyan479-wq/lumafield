@@ -8,7 +8,7 @@ LumaField is a no-build, local-first generative soundscape studio. It combines a
 
 ## Try it
 
-Open [`index.html`](index.html) in a modern browser, or visit the [GitHub Pages demo](https://iadithyan479-wq.github.io/lumafield/). Audio begins only after a user gesture (press **Play** or **Record**). The visual scene works without audio.
+**[Open the LumaField live preview](https://htmlpreview.github.io/?https://github.com/iadithyan479-wq/lumafield/blob/main/index.html)**, or open [`index.html`](index.html) locally. The preview runs the repository’s `index.html` through HTMLPreview; it is a lightweight hosted preview, not a GitHub Pages deployment. Audio begins only after a user gesture (press **Play** or **Record**). The visual scene works without audio.
 
 ## Built-in atmospheres
 
