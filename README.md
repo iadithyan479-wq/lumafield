@@ -2,39 +2,70 @@
 
 > A little pocket of atmosphere, made just for this moment.
 
-LumaField is a tiny generative soundscape studio that pairs a living, animated light field with a soft ambient score composed in your browser. Pick an atmosphere, tune its drift, warmth, and texture, and take a breath. **No account, server, tracking, or external audio files.**
+LumaField is a no-build, local-first generative soundscape studio. It combines a slowly shifting canvas scene with procedurally generated ambient tones. Tune the character of a soundscape, save your own presets in this browser, watch the live waveform, and record the mix to an audio file.
 
-![LumaField interface](https://raw.githubusercontent.com/iadithyan479-wq/lumafield/main/preview.png)
+**No account, backend, external audio assets, analytics, or audio uploads.** Sound generation, recording, and saved presets stay on your device.
 
 ## Try it
 
-Open [`index.html`](index.html) in a modern browser, or visit the [live demo](https://iadithyan479-wq.github.io/lumafield/). Press the play button once to enable audio (browsers require a user gesture).
+Open [`index.html`](index.html) in a modern browser, or visit the [GitHub Pages demo](https://iadithyan479-wq.github.io/lumafield/). Audio begins only after a user gesture (press **Play** or **Record**). The visual scene works without audio.
 
-## Four atmospheres
+## Built-in atmospheres
 
 - **Dusk** — warm, low-lit garden tones
 - **Tide** — cool, open-water drift
 - **Canopy** — soft, rain-washed greens
 - **Orbit** — slow, spacious harmonic tones
 
-## Make it yours
+Use **Drift** to change how the visuals wander and how quickly new tones arrive; **Warmth** affects the scene palette and synth filter; **Texture** adjusts the film-grain overlay. **Volume** controls the master output and the level captured in a recording.
 
-Adjust **Drift** to change how the visual field wanders, **Warmth** to tint the light and sound, and **Texture** to add a touch of film grain. The master volume is independent of those controls. Press the red **Record** button to capture the current soundscape; press it again to stop and download your recording. Recording starts audio automatically if needed and exports a browser-supported WebM/Opus or Ogg/Opus file. Your audio is generated and recorded locally — it is never uploaded.
+## Save and load custom soundscapes
 
-### Keyboard
+1. Choose a built-in atmosphere and adjust Drift, Warmth, Texture, and Volume.
+2. Press **＋ Save**, enter a name, and confirm. The current settings are saved in this browser.
+3. Choose a saved soundscape from **Your saved soundscapes**, then press **Load** to restore it.
+
+Presets are stored as JSON under the browser `localStorage` key `lumafield.customPresets.v1`. Each record contains a display name, built-in atmosphere index, and the four control values (`drift`, `warmth`, `texture`, and `volume`). The application validates the stored array when reading it and clamps restored slider values to 0–100. Storage is origin- and browser-specific: saved presets do not sync between devices or browsers. Clearing this site's browser storage removes them. No audio data is stored in a preset.
+
+## Live waveform
+
+During playback, the animated trace in the scene is driven by the actual generated audio signal, rather than by a decorative oscillator. The audio graph routes the master mix through a Web Audio `AnalyserNode`. On each animation frame, LumaField reads its time-domain samples with `getByteTimeDomainData()`, recenters the unsigned 8-bit samples around 128, normalizes the current peak, and draws a glowing line into the scene canvas. The trace is hidden while playback is stopped. The analyzer is part of the same graph used for speakers and recording, so it tracks the selected soundscape and master level.
+
+## Recording and audio export — technical notes
+
+Press the red circle beside Play to start recording; it starts sound playback first if necessary. Press the square stop control to finish and download the recording. The file name includes the selected atmosphere and a timestamp. Set the master volume before recording: the file captures the current output level.
+
+### Audio graph
+
+The synthesizer creates voices from Web Audio oscillators (sine and triangle waves). Each voice is tuned to a note in the app's frequency set, passed through a low-pass `BiquadFilterNode`, shaped by a slow attack/release `GainNode` envelope, and connected to the master gain. New voices are scheduled periodically, with the interval affected by Drift. The master gain is set by the Volume slider.
+
+```text
+Oscillator → voice filter → voice envelope → master gain → AnalyserNode → speakers
+                                                               └──────────────→ MediaStreamAudioDestinationNode
+```
+
+The analyzer branches the final mix to both the audible output and a `MediaStreamAudioDestinationNode`. The latter exposes an audio-only `MediaStream`; it does not capture the microphone, desktop, or screen.
+
+### Browser recording lifecycle
+
+1. **Start audio in response to the click.** Browsers generally require a user action before creating/resuming audible Web Audio. If audio is not already playing, the Record button starts the same sound engine used by Play.
+2. **Choose a supported container.** LumaField checks `MediaRecorder.isTypeSupported()` and prefers Opus in WebM, then Opus in Ogg, then MP4, WebM, or Ogg. If none of those explicit types is advertised but `MediaRecorder` exists, it asks the browser to select its default format. Availability depends on browser and OS codecs.
+3. **Record the generated mix.** A `MediaRecorder` consumes the audio destination stream. It emits `dataavailable` chunks periodically (one-second timeslice) and does not request any network access or file-system permissions.
+4. **Stop and assemble.** Pressing Record again calls `MediaRecorder.stop()`. The final `dataavailable` event is collected, then `stop` assembles the chunks into a typed `Blob`.
+5. **Download locally.** LumaField creates a temporary object URL for the Blob, triggers a download link with a timestamped filename, removes the temporary link, and revokes the object URL after a short delay. The resulting file is typically `.webm`, `.ogg`, or `.m4a`, depending on the selected MIME type.
+
+The recording contains the complete output mix at the master volume, including any silence if playback is paused while recording. It does not include the canvas video. LumaField does not convert recordings to MP3/WAV or upload them. If MediaRecorder or a supported audio codec is unavailable, the browser reports that recording cannot start; playback and the visualizer may still work.
+
+## Keyboard shortcuts
 
 | Key | Action |
 | --- | --- |
-| `Space` | Play / pause (when a control isn't focused) |
-| `1`–`4` | Select an atmosphere |
-
-## Record a soundscape
-
-Press the red circle beside Play to begin recording (audio starts automatically). Press the square stop control to finish; the recording downloads to your device. The file uses the selected atmosphere in its name. Export format is chosen based on browser support (WebM/Opus or Ogg/Opus). Recordings include the complete mix at the current volume, so set the volume before recording. Use a current browser with the MediaRecorder API; audio remains on your device.
+| `Space` | Play / pause (when a control is not focused) |
+| `1`–`4` | Select a built-in atmosphere |
 
 ## Run locally
 
-No build step or dependencies. Clone the repo and open `index.html`, or serve the folder with any static file server:
+There are no dependencies, build tools, or server-side components. Clone the repository and open `index.html`, or run a static server:
 
 ```bash
 git clone https://github.com/iadithyan479-wq/lumafield.git
@@ -44,15 +75,15 @@ python3 -m http.server 8000
 
 Then open <http://localhost:8000>.
 
-## How it works
-
-- Canvas animation: layered gradients and slowly drifting, seeded light forms.
-- Sound: Web Audio oscillators, low-pass filtering, and slow envelopes create evolving, randomly voiced ambient tones.
-- All controls work locally in a single static HTML file. Audio starts only after you press play.
-
 ## Browser support
 
-A modern browser with Canvas 2D, Web Audio API, and MediaRecorder support for recording. The visual field works without audio; Safari/iOS may ask for a tap before sound begins. Recording format availability varies by browser.
+A modern browser with Canvas 2D and Web Audio API support. Saving custom presets requires `localStorage`. Recording requires `MediaRecorder` plus a browser-supported audio recording format (format support varies; WebM/Opus and Ogg/Opus are preferred, with MP4 as an alternative). Safari/iOS may require a tap to start audio. The visualizer is active during playback and does not require recording support.
+
+## Project structure
+
+- `index.html` — complete UI, styles, generative canvas, Web Audio graph, visualization, preset storage, and MediaRecorder export.
+- `README.md` — setup and technical documentation.
+- `LICENSE` — MIT license.
 
 ## License
 
