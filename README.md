@@ -2,7 +2,7 @@
 
 > A little pocket of atmosphere, made just for this moment.
 
-LumaField is a no-build, local-first generative soundscape studio. It combines a slowly shifting canvas scene with procedurally generated ambient tones. Tune the character of a soundscape, save your own presets in this browser, watch the live waveform, and record the mix to an audio file.
+LumaField is a no-build, local-first generative soundscape studio. It combines a slowly shifting canvas scene with procedurally generated ambient tones. Tune the character of a soundscape, save your own presets in this browser, watch the live waveform, and manage saved presets and recorded mixes in one dashboard. Recordings can be previewed, downloaded again, or removed from the browser library.
 
 **No account, backend, external audio assets, analytics, or audio uploads.** Sound generation, recording, and saved presets stay on your device.
 
@@ -27,13 +27,25 @@ Use **Drift** to change how the visuals wander and how quickly new tones arrive;
 
 Presets are stored as JSON under the browser `localStorage` key `lumafield.customPresets.v1`. Each record contains a display name, built-in atmosphere index, and the four control values (`drift`, `warmth`, `texture`, and `volume`). The application validates the stored array when reading it and clamps restored slider values to 0–100. Storage is origin- and browser-specific: saved presets do not sync between devices or browsers. Clearing this site's browser storage removes them. No audio data is stored in a preset.
 
+## Sound library dashboard
+
+Open **My Library** in the top bar to manage this browser's sound collection. The dashboard has separate tabs for custom presets and audio recordings, plus counts and the total size of archived audio.
+
+- **Presets:** load a saved setting into the studio or delete it from the library.
+- **Recordings:** preview audio inline, download the original file again, or permanently remove its local archive copy.
+- The dashboard is a local browser interface; it does not sync to an account or send data to a server.
+
+Saved preset JSON remains in `localStorage` under `lumafield.customPresets.v1`. Recording blobs and their metadata are stored in IndexedDB (`lumafield-library-v1`, object store `recordings`). Each recording record includes its Blob, MIME type, filename, creation time, duration, byte size, atmosphere, and settings snapshot. The dashboard creates temporary object URLs for inline preview and revokes them when the dialog closes. Removing a recording deletes its IndexedDB copy; it does not delete any file already downloaded to the operating system.
+
+Browser storage is quota-limited and can be cleared by the browser or the user. A very large or long recording may download successfully even if the browser cannot save a second copy to the library; LumaField reports that case in the UI. To free browser storage, delete recordings in My Library or clear site data in browser settings. Presets and recordings are device- and origin-specific and are not backed up or synchronized.
+
 ## Live waveform
 
 During playback, the animated trace in the scene is driven by the actual generated audio signal, rather than by a decorative oscillator. The audio graph routes the master mix through a Web Audio `AnalyserNode`. On each animation frame, LumaField reads its time-domain samples with `getByteTimeDomainData()`, recenters the unsigned 8-bit samples around 128, normalizes the current peak, and draws a glowing line into the scene canvas. The trace is hidden while playback is stopped. The analyzer is part of the same graph used for speakers and recording, so it tracks the selected soundscape and master level.
 
 ## Recording and audio export — technical notes
 
-Press the red circle beside Play to start recording; it starts sound playback first if necessary. Press the square stop control to finish and download the recording. The file name includes the selected atmosphere and a timestamp. Set the master volume before recording: the file captures the current output level.
+Press the red circle beside Play to start recording; it starts sound playback first if necessary. Press the square stop control to finish and download the recording. The file name includes the selected atmosphere and a timestamp. Set the master volume before recording: the file captures the current output level. When recording ends, LumaField downloads the file and attempts to archive a local copy in My Library using IndexedDB. If storage is unavailable or full, the download still works.
 
 ### Audio graph
 
@@ -77,11 +89,11 @@ Then open <http://localhost:8000>.
 
 ## Browser support
 
-A modern browser with Canvas 2D and Web Audio API support. Saving custom presets requires `localStorage`. Recording requires `MediaRecorder` plus a browser-supported audio recording format (format support varies; WebM/Opus and Ogg/Opus are preferred, with MP4 as an alternative). Safari/iOS may require a tap to start audio. The visualizer is active during playback and does not require recording support.
+A modern browser with Canvas 2D and Web Audio API support. Presets require `localStorage`; managing recorded audio in My Library requires IndexedDB. Recording requires `MediaRecorder` plus a browser-supported audio recording format (format support varies; WebM/Opus and Ogg/Opus are preferred, with MP4 as an alternative). Safari/iOS may require a tap to start audio. The visualizer is active during playback and does not require recording support.
 
 ## Project structure
 
-- `index.html` — complete UI, styles, generative canvas, Web Audio graph, visualization, preset storage, and MediaRecorder export.
+- `index.html` — complete UI, styles, generative canvas, Web Audio graph, visualization, preset storage, recording archive, and MediaRecorder export.
 - `README.md` — setup and technical documentation.
 - `LICENSE` — MIT license.
 
