@@ -21,7 +21,7 @@ Use **Drift** to change how the visuals wander and how quickly new tones arrive;
 
 ## Save and load custom soundscapes
 
-1. Choose a built-in atmosphere and adjust Drift, Warmth, Texture, and Volume.
+1. Choose a built-in atmosphere and adjust Drift, Warmth, Texture, Volume, and Mic Mix.
 2. Press **＋ Save**, enter a name, and confirm. The current settings are saved in this browser.
 3. Choose a saved soundscape from **Your saved soundscapes**, then press **Load** to restore it.
 
@@ -96,14 +96,38 @@ python3 -m http.server 8000
 
 Then open <http://localhost:8000>.
 
+## Android install with Termux
+
+LumaField is a static web app rather than a native APK. On Android, Termux can run its local web server; Chrome can then install the PWA to the home screen. This also enables the app shell to be cached for offline use after its first successful load.
+
+1. Install Termux and open its terminal. The Play Store currently has a Termux listing whose code is maintained separately in the [Termux Play Store source repository](https://github.com/termux-play-store/termux-apps). The upstream Termux project documents that Play Store builds are a separate release path from its F-Droid/GitHub builds. Avoid mixing install sources or trying to update across them; see the [upstream installation note](https://github.com/termux/termux-app/discussions/4000).
+2. In Termux, install the small prerequisites and clone this project:
+
+   ```sh
+   pkg update -y
+   pkg install -y git python
+   git clone https://github.com/iadithyan479-wq/lumafield.git
+   cd lumafield
+   chmod +x termux-start.sh
+   ./termux-start.sh
+   ```
+
+3. Leave that Termux session running. In Android Chrome, open <http://127.0.0.1:8000>. Choose **Install app** or **Add to Home screen** from Chrome’s menu.
+
+The server binds to `127.0.0.1` only, so it is reachable on the same phone and is not exposed to the Wi-Fi network. After the first successful load, the service worker caches the app shell for offline launches. Presets and recordings remain in that browser origin’s local storage. Microphone input works only after the browser grants permission. To update the app, stop the server with `Ctrl+C`, run `cd ~/lumafield && git pull`, then restart `./termux-start.sh`.
+
+To choose another local port, stop the server with `Ctrl+C` and start it with `./termux-start.sh 8080`; then use the matching address `http://127.0.0.1:8080`. Termux installations from different release sources may not be interchangeable; follow the source’s own update guidance.
+
 ## Browser support
 
-A modern browser with Canvas 2D and Web Audio API support. Microphone mixing additionally requires an HTTPS/localhost secure context and user permission. Presets require `localStorage`; managing recorded audio in My Library requires IndexedDB. Recording requires `MediaRecorder` plus a browser-supported audio recording format (format support varies; WebM/Opus and Ogg/Opus are preferred, with MP4 as an alternative). Safari/iOS may require a tap to start audio. The visualizer is active during playback and does not require recording support. Microphone permission is only requested after an explicit click; stopping playback stops the active input tracks.
+A modern browser with Canvas 2D and Web Audio API support. Android Chrome can install LumaField as a home-screen PWA when served from HTTPS or the Termux localhost instructions above. Microphone mixing additionally requires an HTTPS/localhost secure context and user permission. Presets require `localStorage`; managing recorded audio in My Library requires IndexedDB. Recording requires `MediaRecorder` plus a browser-supported audio recording format (format support varies; WebM/Opus and Ogg/Opus are preferred, with MP4 as an alternative). Safari/iOS may require a tap to start audio. The visualizer is active during playback and does not require recording support. Microphone permission is only requested after an explicit click; stopping playback stops the active input tracks.
 
 ## Project structure
 
 - `index.html` — complete UI, styles, generative canvas, Web Audio graph, visualization, preset storage, recording archive, and MediaRecorder export.
-- `README.md` — setup and technical documentation.
+- `README.md` — desktop, Android/Termux setup, and technical documentation.
+- `manifest.webmanifest`, `service-worker.js`, and `icons/` — installable PWA metadata, offline app-shell cache, and home-screen icons.
+- `termux-start.sh` — loopback-only static server launcher for Termux on Android.
 - `LICENSE` — MIT license.
 
 ## License
